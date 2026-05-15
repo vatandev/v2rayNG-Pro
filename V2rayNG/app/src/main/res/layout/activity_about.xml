@@ -30,6 +30,7 @@
                 android:layout_height="wrap_content"
                 android:baselineAligned="false"
                 android:gravity="center_vertical"
+                android:layoutDirection="ltr"
                 android:orientation="horizontal">
 
                 <TextView

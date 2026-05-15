@@ -1,11 +1,11 @@
 {
   "releases": [
     {
-      "version": "0.0.3",
-      "title_en": "0.0.3",
-      "title_fa": "۰٫۰٫۳",
-      "body_en": "icon fix.",
-      "body_fa": "اصلاح آیکون."
+      "version": "0.0.4",
+      "title_en": "0.0.4",
+      "title_fa": "۰٫۰٫۴",
+      "body_en": "small fixes.",
+      "body_fa": "تغییرات جزئی."
     },
     {
       "version": "0.0.2",
