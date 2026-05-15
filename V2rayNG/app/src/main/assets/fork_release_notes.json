@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "version": "0.0.3",
+      "title_en": "0.0.3",
+      "title_fa": "۰٫۰٫۳",
+      "body_en": "icon fix.",
+      "body_fa": "اصلاح آیکون."
+    },
+    {
       "version": "0.0.2",
       "title_en": "0.0.2",
       "title_fa": "۰٫۰٫۲",

@@ -328,7 +328,7 @@ class MainActivity : HelperBaseActivity(), NavigationView.OnNavigationItemSelect
         if (dotIndex < 0) return fullText
         val drawable = androidx.core.content.ContextCompat.getDrawable(this, com.v2ray.ang.R.drawable.ic_outage_dot)
             ?: return fullText
-        val size = (binding.tvOutageTicker.textSize * 1.05f).toInt()
+        val size = (binding.tvOutageTicker.textSize * 1.4f).toInt()
         drawable.setBounds(0, 0, size, size)
         val tint = if (on) android.graphics.Color.parseColor("#FF3B30") else android.graphics.Color.parseColor("#33FF3B30")
         drawable.setTint(tint)
