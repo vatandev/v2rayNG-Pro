@@ -1,0 +1,6 @@
+<!-- Soft accent-tinted square for the three usage summary tiles. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/colorStatCard" />
+    <corners android:radius="12dp" />
+</shape>

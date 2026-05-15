@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bottom_sheet"
+    android:orientation="vertical"
+    android:paddingBottom="12dp">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="5dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/bg_drag_handle" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="@string/fork_sub_menu_interval"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="17sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginEnd="20dp"
+        android:background="@color/colorRowDivider" />
+
+    <LinearLayout
+        android:id="@+id/opt_60"
+        style="@style/ForkIntervalRow">
+        <TextView style="@style/ForkIntervalCheck" android:id="@+id/check_60" />
+        <TextView style="@style/ForkIntervalLabel" android:text="@string/fork_interval_60" />
+    </LinearLayout>
+
+    <View style="@style/ForkIntervalDivider" />
+
+    <LinearLayout
+        android:id="@+id/opt_360"
+        style="@style/ForkIntervalRow">
+        <TextView style="@style/ForkIntervalCheck" android:id="@+id/check_360" />
+        <TextView style="@style/ForkIntervalLabel" android:text="@string/fork_interval_360" />
+    </LinearLayout>
+
+    <View style="@style/ForkIntervalDivider" />
+
+    <LinearLayout
+        android:id="@+id/opt_1440"
+        style="@style/ForkIntervalRow">
+        <TextView style="@style/ForkIntervalCheck" android:id="@+id/check_1440" />
+        <TextView style="@style/ForkIntervalLabel" android:text="@string/fork_interval_1440" />
+    </LinearLayout>
+
+    <View style="@style/ForkIntervalDivider" />
+
+    <LinearLayout
+        android:id="@+id/opt_10080"
+        style="@style/ForkIntervalRow">
+        <TextView style="@style/ForkIntervalCheck" android:id="@+id/check_10080" />
+        <TextView style="@style/ForkIntervalLabel" android:text="@string/fork_interval_10080" />
+    </LinearLayout>
+
+</LinearLayout>

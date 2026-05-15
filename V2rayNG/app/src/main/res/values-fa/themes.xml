@@ -1,0 +1,24 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Persian-locale theme override. Apply Vazirmatn as the default font family
+      so every TextView, MaterialTextView, dialog title, menu item, etc renders
+      with the proper Persian typography (correct ascender/descender for Arabic
+      glyphs, proper diacritic positioning, native digit shaping).
+
+      English locale falls back to res/values/themes.xml which inherits the
+      platform default. Latin text inside Persian screens still renders well
+      because Vazirmatn ships a complete Latin set.
+    -->
+    <!-- Persian-locale font override layered on top of the common AppThemeBase. -->
+    <style name="AppThemeBase.Vazirmatn" parent="AppThemeBase">
+        <item name="android:fontFamily">@font/vazirmatn</item>
+        <item name="fontFamily">@font/vazirmatn</item>
+    </style>
+
+    <!-- Activate the Vazirmatn overlay for fa locale by re-parenting the day-night style. -->
+    <style name="AppThemeDayNight" parent="AppThemeBase.Vazirmatn">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+    </style>
+</resources>

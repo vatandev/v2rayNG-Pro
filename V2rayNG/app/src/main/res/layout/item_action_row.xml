@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="52dp"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp">
+
+    <ImageView
+        android:id="@+id/iv_action_icon"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginEnd="16dp"
+        app:tint="?attr/colorOnSurface"
+        tools:srcCompat="@drawable/ic_settings_24dp" />
+
+    <TextView
+        android:id="@+id/tv_action_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textAlignment="viewStart"
+        android:textColor="?attr/colorOnSurface"
+        android:textDirection="locale"
+        android:textSize="15sp"
+        tools:text="عملیات نمونه" />
+
+    <ImageView
+        android:id="@+id/iv_action_check"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="12dp"
+        android:visibility="gone"
+        app:srcCompat="@drawable/ic_action_done"
+        app:tint="@color/colorUsageBadgeActive"
+        tools:visibility="visible" />
+</LinearLayout>

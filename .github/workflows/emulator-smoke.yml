@@ -1,0 +1,164 @@
+name: Emulator smoke test
+
+# Boots an Android emulator, installs the freshly built APK, launches
+# the main activity, and captures logcat. The whole point: if the app
+# crashes on launch, we see the stack trace in CI artifacts without
+# anyone having to touch a real device.
+
+on:
+  workflow_run:
+    workflows: ["Build APK"]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Build APK run id to pull the artifact from. Default: latest successful master run.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke:
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      - name: Resolve build run id
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.run_id }}" ]; then
+            rid="${{ inputs.run_id }}"
+          elif [ -n "${{ github.event.workflow_run.id }}" ]; then
+            rid="${{ github.event.workflow_run.id }}"
+          else
+            rid="$(gh run list --workflow 'Build APK' --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          fi
+          if [ -z "$rid" ]; then
+            echo "No Build APK run found." >&2
+            exit 1
+          fi
+          echo "id=$rid" >> "$GITHUB_OUTPUT"
+          echo "Using Build APK run $rid"
+
+      - name: Download universal APK artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p apk
+          # The Build APK workflow uploads per-ABI artifacts named arm64-v8a, armeabi-v7a, x86-apk.
+          # The emulator we boot below is x86_64, so any of the universal-ABI APKs work; we grab
+          # the arm64-v8a artifact only when nothing else matches.
+          gh run download "${{ steps.run.outputs.id }}" --repo "${{ github.repository }}" --dir apk || true
+          ls -la apk
+          find apk -name "*.apk" -print
+          # Pick the universal APK if present, otherwise x86_64, otherwise the first APK we see.
+          apk="$(find apk -name '*universal*.apk' | head -n1)"
+          [ -z "$apk" ] && apk="$(find apk -name '*x86_64*.apk' | head -n1)"
+          [ -z "$apk" ] && apk="$(find apk -name '*.apk' | head -n1)"
+          if [ -z "$apk" ]; then
+            echo "No APK artifact found." >&2
+            exit 1
+          fi
+          echo "APK_PATH=$apk" >> "$GITHUB_ENV"
+          echo "Picked $apk"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Resolve package + main activity
+        id: pkg
+        run: |
+          set -euo pipefail
+          # We know the package id, but to find the launchable activity we'll let aapt2
+          # tell us. aapt2 ships with Android Build Tools, which we install in the next step.
+          echo "package=com.v2ray.ang.pro" >> "$GITHUB_OUTPUT"
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api33-x86_64-v2
+
+      - name: Create AVD and run smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            # Note: NOT using `set -e` here. Many of the adb dumpsys/grep
+            # invocations exit non-zero by design (e.g. when no crash
+            # exists). The "verdict" step at the end decides success.
+            adb wait-for-device
+            adb shell input keyevent 82 || true
+
+            echo "==== installing APK ===="
+            adb install -r -d "$APK_PATH" || { echo "install failed"; exit 1; }
+
+            echo "==== package info ===="
+            adb shell pm list packages | grep -F 'v2ray' || true
+
+            echo "==== launching main activity ===="
+            adb logcat -c
+            adb shell monkey -p ${{ steps.pkg.outputs.package }} -c android.intent.category.LAUNCHER 1 || true
+
+            echo "==== waiting 12 seconds for cold start ===="
+            sleep 12
+
+            echo "==== top activity (should be ours if app stayed up) ===="
+            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|mFocusedActivity' || true
+
+            echo "==== checking for crash dialogs ===="
+            adb shell dumpsys activity processes | grep -E 'crashing|notResponding' || true
+
+            echo "==== dumping logcat ===="
+            mkdir -p /tmp/diag
+            adb logcat -d > /tmp/diag/logcat-full.txt
+            adb logcat -d *:E > /tmp/diag/logcat-errors.txt
+            adb logcat -d AndroidRuntime:E *:S > /tmp/diag/logcat-androidruntime.txt
+            adb shell ps -A | grep -E "${{ steps.pkg.outputs.package }}" > /tmp/diag/ps.txt || true
+
+            echo "==== verdict ===="
+            if grep -F "${{ steps.pkg.outputs.package }}" /tmp/diag/ps.txt > /dev/null; then
+              echo "OK: process is still running."
+            else
+              echo "FAIL: process exited before the dump."
+              echo "---- AndroidRuntime errors ----"
+              cat /tmp/diag/logcat-androidruntime.txt | head -200
+              exit 1
+            fi
+
+      - name: Upload logcat artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-logcat-${{ steps.run.outputs.id }}
+          path: /tmp/diag/
+          if-no-files-found: warn
+          retention-days: 14

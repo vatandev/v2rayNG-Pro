@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "outage": {
+    "enabled": true,
+    "start_date": "2026-02-28",
+    "message_en": "● Day %d of the internet shutdown in Iran",
+    "message_fa": "● روز %d قطعی اینترنت در ایران"
+  },
+  "latest_version": {
+    "version_name": "0.0.1",
+    "version_code": 1
+  },
+  "donate": {
+    "trc20_usdt": "TXyZ-replace-with-real-address",
+    "btc": "bc1q-replace-with-real-address"
+  },
+  "links": {
+    "site": "https://vatan.dev/v2rayng",
+    "releases": "https://github.com/vatandev/v2rayNG-Pro/releases"
+  },
+  "now": {
+    "fa": "روی v2rayNG-Pro کار می‌کنم",
+    "en": "Working on v2rayNG-Pro"
+  }
+}

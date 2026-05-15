@@ -1,0 +1,225 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        required: false
+        type: string
+  push:
+    branches:
+      - master
+    tags:
+      - '*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SHOULD_BUILD: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        submodules: 'recursive'
+        fetch-depth: '0'
+
+    - name: Setup Android SDK
+      if: env.SHOULD_BUILD == 'true'
+      uses: android-actions/setup-android@v3.2.0
+      with:
+        log-accepted-android-sdk-licenses: false
+        cmdline-tools-version: '13114758'
+        packages: 'platforms;android-36.1 build-tools;36.1.0 platform-tools'
+
+    - name: Install NDK
+      if: env.SHOULD_BUILD == 'true'
+      run: |
+        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+          --channel=0 \
+          --install "ndk;28.2.13676358"
+        echo "NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> $GITHUB_ENV
+        sed -i '10i\
+        \
+            ndkVersion = "28.2.13676358"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
+
+    - name: Restore cached libhevtun
+      if: env.SHOULD_BUILD == 'true'
+      id: cache-libhevtun-restore
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ github.workspace }}/libs
+        key: libhevtun-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hev-socks5-tunnel/HEAD') }}-${{ hashFiles('compile-hevtun.sh') }}
+
+    - name: Build libhevtun
+      if: env.SHOULD_BUILD == 'true' && steps.cache-libhevtun-restore.outputs.cache-hit != 'true'
+      run: |
+        bash compile-hevtun.sh
+    
+    - name: Save libhevtun
+      if: env.SHOULD_BUILD == 'true' && steps.cache-libhevtun-restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ github.workspace }}/libs
+        key: libhevtun-${{ runner.os }}-${{ env.NDK_HOME }}-${{ hashFiles('.git/modules/hev-socks5-tunnel/HEAD') }}-${{ hashFiles('compile-hevtun.sh') }}
+
+    - name: Copy libhevtun
+      if: env.SHOULD_BUILD == 'true'
+      run: |
+        cp -r ${{ github.workspace }}/libs ${{ github.workspace }}/V2rayNG/app
+
+    - name: Resolve AndroidLibXrayLite tag
+      if: env.SHOULD_BUILD == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        pushd AndroidLibXrayLite >/dev/null
+        git fetch --tags --quiet origin || true
+        if tag="$(git describe --tags --exact-match 2>/dev/null)"; then
+          :
+        elif tag="$(git describe --tags --abbrev=0 2>/dev/null)"; then
+          :
+        else
+          tag="$(gh release view --repo 2dust/AndroidLibXrayLite --json tagName --jq .tagName)"
+        fi
+        popd >/dev/null
+        echo "AndroidLibXrayLite tag resolved to: ${tag}"
+        echo "CURRENT_TAG=${tag}" >> "$GITHUB_ENV"
+
+    - name: Download libv2ray
+      if: env.SHOULD_BUILD == 'true'
+      uses: robinraju/release-downloader@v1.12
+      with:
+        repository: '2dust/AndroidLibXrayLite'
+        tag: ${{ env.CURRENT_TAG }}
+        fileName: 'libv2ray.aar'
+        out-file-path: V2rayNG/app/libs/
+
+    - name: Setup Java
+      if: env.SHOULD_BUILD == 'true'
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Resolve release tag
+      id: release_tag
+      run: |
+        if [ -n "${{ github.event.inputs.release_tag }}" ]; then
+          tag="${{ github.event.inputs.release_tag }}"
+        elif [ "${{ github.ref_type }}" = "tag" ]; then
+          tag="${{ github.ref_name }}"
+        else
+          tag="$(sed -n 's/.*versionName = "\([0-9]\+\.[0-9]\+\.[0-9]\+\)".*/\1/p' V2rayNG/app/build.gradle.kts | head -n1)"
+        fi
+        echo "value=${tag}" >> "$GITHUB_OUTPUT"
+
+    - name: Ensure release tag exists
+      if: github.event_name == 'workflow_dispatch' && env.SHOULD_BUILD == 'true'
+      run: |
+        tag="${{ steps.release_tag.outputs.value }}"
+        if git rev-parse "${tag}" >/dev/null 2>&1; then
+          echo "Tag ${tag} already exists."
+          exit 0
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git tag -a "${tag}" -m "v2rayNG-Pro ${tag}"
+        git push origin "${tag}"
+
+    - name: Generate release notes
+      if: env.SHOULD_BUILD == 'true'
+      id: release_notes
+      run: |
+        chmod +x scripts/get-release-notes.sh
+        scripts/get-release-notes.sh "${{ steps.release_tag.outputs.value }}" > /tmp/release-notes.md
+        echo "path=/tmp/release-notes.md" >> "$GITHUB_OUTPUT"
+
+    - name: Verify signing secrets
+      if: env.SHOULD_BUILD == 'true'
+      env:
+        B64: ${{ secrets.APP_KEYSTORE_BASE64 }}
+        PASS: ${{ secrets.APP_KEYSTORE_PASSWORD }}
+        ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
+        KPASS: ${{ secrets.APP_KEY_PASSWORD }}
+      run: |
+        missing=()
+        [ -z "$B64" ]   && missing+=("APP_KEYSTORE_BASE64")
+        [ -z "$PASS" ]  && missing+=("APP_KEYSTORE_PASSWORD")
+        [ -z "$ALIAS" ] && missing+=("APP_KEYSTORE_ALIAS")
+        [ -z "$KPASS" ] && missing+=("APP_KEY_PASSWORD")
+        if [ ${#missing[@]} -gt 0 ]; then
+          printf 'Missing required signing secret: %s\n' "${missing[@]}"
+          exit 1
+        fi
+
+    - name: Decode Keystore
+      if: env.SHOULD_BUILD == 'true'
+      uses: timheuer/base64-to-file@v1.2.4
+      id: android_keystore
+      with:
+        fileName: "android_keystore.jks"
+        encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
+
+    - name: Build APK
+      if: env.SHOULD_BUILD == 'true'
+      env:
+        SIGNING_STORE_FILE: ${{ steps.android_keystore.outputs.filePath }}
+        SIGNING_STORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
+        SIGNING_KEY_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
+        SIGNING_KEY_PASSWORD: ${{ secrets.APP_KEY_PASSWORD }}
+      run: |
+        set -euo pipefail
+        cd "${{ github.workspace }}/V2rayNG"
+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
+        chmod 755 gradlew
+        ./gradlew licenseFdroidReleaseReport
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file="$SIGNING_STORE_FILE" \
+          -Pandroid.injected.signing.store.password="$SIGNING_STORE_PASSWORD" \
+          -Pandroid.injected.signing.key.alias="$SIGNING_KEY_ALIAS" \
+          -Pandroid.injected.signing.key.password="$SIGNING_KEY_PASSWORD"
+    
+    - name: Upload arm64-v8a APK
+      uses: actions/upload-artifact@v4
+      if: env.SHOULD_BUILD == 'true' && success()
+      with:
+        name: arm64-v8a
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*arm64-v8a*.apk
+
+    - name: Upload armeabi-v7a APK
+      uses: actions/upload-artifact@v4
+      if: env.SHOULD_BUILD == 'true' && success()
+      with:
+        name: armeabi-v7a
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*armeabi-v7a*.apk
+
+    - name: Upload x86 APK
+      uses: actions/upload-artifact@v4
+      if: env.SHOULD_BUILD == 'true' && success()
+      with:
+        name: x86-apk
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*x86*.apk
+
+    - name: Create or update GitHub release
+      if: env.SHOULD_BUILD == 'true' && success()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        tag="${{ steps.release_tag.outputs.value }}"
+        title="v2rayNG-Pro ${tag}"
+        notes_file="${{ steps.release_notes.outputs.path }}"
+        apk_glob="${{ github.workspace }}/V2rayNG/app/build/outputs/apk/playstore/release/*.apk"
+
+        if gh release view "${tag}" >/dev/null 2>&1; then
+          gh release edit "${tag}" --title "${title}" --notes-file "${notes_file}" --draft=false --latest
+          gh release upload "${tag}" ${apk_glob} --clobber
+        else
+          gh release create "${tag}" ${apk_glob} --title "${title}" --notes-file "${notes_file}" --latest
+        fi

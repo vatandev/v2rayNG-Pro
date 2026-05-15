@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fork toolbar: only three visible actions. The legacy "+" submenu and the
+    overflow ⋮ menu are now rendered by ActionSheets (iOS-style bottom sheets);
+    those items are still referenced by id from MainActivity.onOptionsItemSelected
+    for compatibility, but they live inside the action sheets, not in this XML.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/search_view"
+        android:icon="@drawable/ic_outline_filter_alt_24"
+        android:title="@string/menu_item_search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always|collapseActionView" />
+    <item
+        android:id="@+id/fork_add_sheet"
+        android:icon="@drawable/ic_add_24dp"
+        android:title="@string/menu_item_add_config"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/fork_more_sheet"
+        android:icon="@drawable/ic_more_vert_24dp"
+        android:title="@string/fork_more_actions_title"
+        app:showAsAction="always" />
+</menu>

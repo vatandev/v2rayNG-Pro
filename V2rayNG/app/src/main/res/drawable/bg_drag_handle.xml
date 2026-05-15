@@ -1,0 +1,9 @@
+<!-- iOS-style grabber bar for bottom sheets. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#33000000" />
+    <corners android:radius="2.5dp" />
+    <size
+        android:width="40dp"
+        android:height="5dp" />
+</shape>
