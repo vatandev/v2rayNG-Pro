@@ -3,12 +3,12 @@
   "outage": {
     "enabled": true,
     "start_date": "2026-02-28",
-    "message_en": "◌ Day %d of the internet blackout in Iran",
-    "message_fa": "◌ روز %d قطعی اینترنت در ایران"
+    "message_en": "● Day %d of the internet blackout in Iran",
+    "message_fa": "● روز %d قطعی اینترنت در ایران"
   },
   "latest_version": {
-    "version_name": "0.0.5",
-    "version_code": 5
+    "version_name": "0.0.6",
+    "version_code": 6
   },
   "donate": {
     "trc20_usdt": "TXyZ-replace-with-real-address",

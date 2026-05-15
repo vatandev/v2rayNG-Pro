@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "version": "0.0.6",
+      "title_en": "0.0.6",
+      "title_fa": "۰٫۰٫۶",
+      "body_en": "First release.",
+      "body_fa": "First release."
+    },
+    {
       "version": "0.0.5",
       "title_en": "0.0.5",
       "title_fa": "۰٫۰٫۵",
