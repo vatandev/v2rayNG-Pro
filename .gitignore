@@ -69,5 +69,4 @@ Thumbs.db
 
 # Local-only notes (not for public repo)
 HANDOFF.md
-.claude/
 docs/.wrangler/

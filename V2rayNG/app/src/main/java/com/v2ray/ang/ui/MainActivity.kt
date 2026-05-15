@@ -304,31 +304,41 @@ class MainActivity : HelperBaseActivity(), NavigationView.OnNavigationItemSelect
         val template = if (isFa) RemoteConfigManager.outageMessageFa() else RemoteConfigManager.outageMessageEn()
         val dayStr = if (isFa) com.v2ray.ang.util.JalaliCalendar.toPersianDigits(day.toString()) else day.toString()
         val fullText = template.replace("%d", dayStr)
-        binding.tvOutageTicker.text = fullText
+        val dotIndex = fullText.indexOf('◌')
+
+        binding.tvOutageTicker.text = buildOutageSpan(fullText, dotIndex, true)
         binding.tvOutageTicker.visibility = android.view.View.VISIBLE
 
-        val dotIndex = fullText.indexOf('●')
         if (dotIndex >= 0) {
             outageBlinkJob?.cancel()
             outageBlinkJob = lifecycleScope.launch {
-                val greenOn = android.graphics.Color.parseColor("#34C759")
-                val greenOff = android.graphics.Color.parseColor("#3334C759")
                 val endAt = System.currentTimeMillis() + 10_000L
                 var on = true
                 while (System.currentTimeMillis() < endAt) {
-                    val span = android.text.SpannableString(fullText)
-                    span.setSpan(
-                        android.text.style.ForegroundColorSpan(if (on) greenOn else greenOff),
-                        dotIndex, dotIndex + 1,
-                        android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                    binding.tvOutageTicker.text = span
+                    binding.tvOutageTicker.text = buildOutageSpan(fullText, dotIndex, on)
                     on = !on
                     kotlinx.coroutines.delay(600)
                 }
-                binding.tvOutageTicker.text = fullText
+                binding.tvOutageTicker.text = buildOutageSpan(fullText, dotIndex, true)
             }
         }
+    }
+
+    private fun buildOutageSpan(fullText: String, dotIndex: Int, on: Boolean): CharSequence {
+        if (dotIndex < 0) return fullText
+        val drawable = androidx.core.content.ContextCompat.getDrawable(this, com.v2ray.ang.R.drawable.ic_outage_dot)
+            ?: return fullText
+        val size = (binding.tvOutageTicker.textSize * 1.05f).toInt()
+        drawable.setBounds(0, 0, size, size)
+        val tint = if (on) android.graphics.Color.parseColor("#FF3B30") else android.graphics.Color.parseColor("#33FF3B30")
+        drawable.setTint(tint)
+        val span = android.text.SpannableString(fullText)
+        span.setSpan(
+            android.text.style.ImageSpan(drawable, android.text.style.ImageSpan.ALIGN_CENTER),
+            dotIndex, dotIndex + 1,
+            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        return span
     }
 
     private fun setupGroupTab() {

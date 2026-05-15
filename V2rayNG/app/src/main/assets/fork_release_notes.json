@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "version": "0.0.2",
+      "title_en": "0.0.2",
+      "title_fa": "۰٫۰٫۲",
+      "body_en": "small fixes.",
+      "body_fa": "اصلاحات جزئی."
+    },
+    {
       "version": "0.0.1",
       "title_en": "First release",
       "title_fa": "نسخه‌ی اول",

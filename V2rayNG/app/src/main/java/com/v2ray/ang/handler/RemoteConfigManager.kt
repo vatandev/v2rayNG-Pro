@@ -29,11 +29,11 @@ object RemoteConfigManager {
 
     fun outageMessageFa(): String =
         cached()?.optJSONObject("outage")?.optString("message_fa").orNullIfBlank()
-            ?: "● روز %d قطعی اینترنت در ایران"
+            ?: "◌ روز %d قطعی اینترنت در ایران"
 
     fun outageMessageEn(): String =
         cached()?.optJSONObject("outage")?.optString("message_en").orNullIfBlank()
-            ?: "● Day %d of internet disruption in Iran"
+            ?: "◌ Day %d of the internet blackout in Iran"
 
     private fun cached(): JSONObject? {
         val raw = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_CONFIG_JSON) ?: return null
